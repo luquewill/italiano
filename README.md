@@ -41,14 +41,10 @@ La voz usa la Web Speech API con it-IT: depende de las voces instaladas en el di
 
 ## Cómo funciona
 
-- **Datos**: `src/data/vocabulario.json` (fuente, no se modifica).
-- **Repetición espaciada** (`src/core/srs.ts`): Leitner de 5 cajas, intervalos 1 · 3 · 7 · 16 · 35 días.
-  - Acierto: sube una caja (una palabra nueva que sabías arranca en la caja 2).
-  - Fallo: vuelve a la caja 1, queda vencida hoy y reaparece dentro de la misma sesión (unas 3 palabras después) con un ejercicio fácil.
-  - Estados: sin registro = nueva · cajas 1–2 aprendiendo · 3–4 la reconozco · 5 la uso.
-- **Sesión diaria**: primero repasos vencidos (máx. configurable), después palabras nuevas (15/día por defecto).
-- **Repaso libre**: 20 palabras de lo filtrado aunque no estén vencidas; acertar no adelanta la fecha, fallar sí las baja.
-- **Ejercicios** (`src/core/exercises.ts`): tarjeta, elegir traducción (ambas direcciones), escribir en italiano, artículo + plural, auxiliar + participio, forma del adjetivo, completar el ejemplo, escuchar. Cajas bajas → más reconocimiento; cajas altas → más producción.
-- **Progreso guardado** en `localStorage` bajo la clave `italiano-progreso-v1`.
+- **Camino ascendente** (pantalla de inicio): 53 unidades (A1 → A2 → B1) con 8–10 palabras por lección y una lección de cierre por unidad. Se avanza en orden; las lecciones hechas se pueden repetir. El currículo está en `src/data/curriculum.json` y se regenera con `node scripts/build-curriculum.mjs` (el vocabulario no se modifica).
+- **Lección**: presentación palabra por palabra → práctica de fácil a difícil (reconocer → elegir/completar → escribir) con las palabras de la lección más unas pocas de las dos anteriores. Lo que fallás vuelve al final hasta que lo aciertes. Al terminar se desbloquea la siguiente.
+- **Repaso** (`src/core/srs.ts`): Leitner de 5 cajas (1 · 3 · 7 · 16 · 35 días), solo con palabras de lecciones ya hechas. Aparece como sugerencia arriba del camino.
+- **Práctica libre**: en Explorar, con filtros de nivel/tipo/tema, sobre palabras ya aprendidas.
+- **Progreso guardado** en `localStorage` (`italiano-progreso-v1`); los backups anteriores a la versión con camino se importan sin problema (empiezan en la primera lección).
 
 Los íconos de la PWA se regeneran con `node scripts/make-icons.mjs`.

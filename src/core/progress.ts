@@ -17,6 +17,7 @@ const fresh = (): State => ({
   settings: structuredClone(DEFAULT_SETTINGS),
   words: {},
   daily: { date: today(), newDone: 0 },
+  path: { done: [] },
 })
 
 /** Valida/normaliza un objeto leído de localStorage o de un backup. */
@@ -35,6 +36,8 @@ function sanitize(x: unknown): State | null {
     if (r && typeof r.box === 'number' && typeof r.due === 'string') s.words[Number(k)] = r
   }
   if (o.daily && typeof o.daily.date === 'string') s.daily = { date: o.daily.date, newDone: o.daily.newDone | 0 }
+  // migración: los backups/estados anteriores no tienen camino
+  if (o.path && Array.isArray(o.path.done)) s.path = { done: o.path.done.filter((x) => typeof x === 'string') }
   return s
 }
 
@@ -91,6 +94,15 @@ export function saveRec(id: number, rec: Rec, countAsNewToday: boolean) {
       daily: countAsNewToday ? { date: t, newDone: daily.newDone + 1 } : daily,
     }
   })
+}
+
+/** Guarda de una vez los registros de una lección y la marca como completada. */
+export function completeLesson(lessonId: string, recs: Record<number, Rec>) {
+  setState((s) => ({
+    ...s,
+    words: { ...s.words, ...recs },
+    path: { done: s.path.done.includes(lessonId) ? s.path.done : [...s.path.done, lessonId] },
+  }))
 }
 
 export function resetWord(id: number) {

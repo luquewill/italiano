@@ -1,3 +1,4 @@
+import { LESSONS, UNITS, currentLesson } from '../curriculum'
 import { NIVELES, TIPOS, WORDS } from '../data'
 import { useAppState } from '../core/progress'
 import { STATUS_LABEL, statusOf } from '../core/srs'
@@ -33,6 +34,15 @@ function Bar({ label, c }: { label: string; c: Record<WordStatus, number> }) {
 export function Progress() {
   const s = useAppState()
   const all = count(WORDS, s)
+  const done = new Set(s.path.done)
+  const cur = currentLesson(done)
+  const faltan = (nivel: string) => {
+    const ls = LESSONS.filter((l) => l.nivel === nivel)
+    const left = ls.filter((l) => !done.has(l.id))
+    const units = UNITS.filter((u) => u.nivel === nivel)
+    const unitsLeft = units.filter((u) => !u.lessons.every((l) => done.has(l.id))).length
+    return { total: ls.length, left: left.length, units: units.length, unitsLeft }
+  }
   return (
     <div className="screen stack">
       <header>
@@ -41,6 +51,37 @@ export function Progress() {
           {WORDS.length - all.nueva} de {WORDS.length} palabras vistas
         </p>
       </header>
+
+      <section className="card stack">
+        <h2>Dónde voy</h2>
+        {cur ? (
+          <p>
+            Unidad {cur.unitIndex + 1} de {UNITS.length} · <strong>{cur.unitTitle}</strong>
+            <br />
+            <span className="muted">
+              {cur.cierre ? 'Lección de cierre' : cur.title} · nivel {cur.nivel}
+            </span>
+          </p>
+        ) : (
+          <p>¡Completaste todo el camino!</p>
+        )}
+        {NIVELES.map((n) => {
+          const f = faltan(n)
+          return (
+            <div key={n} className="prog-row">
+              <div className="head">
+                <span>{n}</span>
+                <span className="muted">
+                  {f.left === 0 ? 'terminado' : `faltan ${f.left} lecciones (${f.unitsLeft} ${f.unitsLeft === 1 ? 'unidad' : 'unidades'})`}
+                </span>
+              </div>
+              <div className="stacked">
+                <div className="seg uso" style={{ width: `${((f.total - f.left) / f.total) * 100}%` }} />
+              </div>
+            </div>
+          )
+        })}
+      </section>
 
       <section className="card stack">
         <div className="legend">

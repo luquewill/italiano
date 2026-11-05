@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { NIVELES, TEMAS, TIPOS, WORDS } from '../data'
 import { stripAccents } from '../core/normalize'
-import { useAppState } from '../core/progress'
+import { updateSettings, useAppState } from '../core/progress'
+import { learnedSet } from '../core/session'
 import { statusOf } from '../core/srs'
 import { StatusDot } from '../components/ui'
 
@@ -26,6 +27,13 @@ export function Explore() {
         (!nq || norm(w.italiano).includes(nq) || norm(w.espanol).includes(nq) || norm(w.ejemplo).includes(nq)),
     )
   }, [q, nivel, tipo, tema])
+
+  const learned = useMemo(() => learnedSet(s), [s])
+  const practicable = list.filter((w) => learned.has(w.id)).length
+  const practice = () => {
+    updateSettings({ filtros: { niveles: nivel ? [nivel] : [], tipos: tipo ? [tipo] : [], temas: tema ? [tema] : [] } })
+    window.location.hash = '/sesion/free'
+  }
 
   const reset = (fn: () => void) => {
     fn()
@@ -68,6 +76,18 @@ export function Explore() {
             <option key={t}>{t}</option>
           ))}
         </select>
+      </div>
+
+      <div className="card stack">
+        <div>
+          <strong>Práctica libre</strong>
+          <p className="muted small">
+            Practicá con las palabras de lecciones que ya hiciste, usando estos filtros. No cambia el orden del camino.
+          </p>
+        </div>
+        <button type="button" className="btn" disabled={practicable === 0} onClick={practice}>
+          {practicable === 0 ? 'Sin palabras aprendidas con estos filtros' : `Practicar estas palabras (${Math.min(20, practicable)})`}
+        </button>
       </div>
 
       <div className="list">

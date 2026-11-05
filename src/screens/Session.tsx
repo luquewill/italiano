@@ -2,13 +2,11 @@ import { useCallback, useMemo, useState } from 'react'
 import { BY_ID } from '../data'
 import { applyAnswer } from '../core/srs'
 import { getState, saveRec } from '../core/progress'
-import { makeExercise, type Exercise, type Kind } from '../core/exercises'
+import { makeExercise, type Exercise } from '../core/exercises'
 import { buildSession, type SessionItem, type SessionMode } from '../core/session'
 import { ExerciseView } from '../components/ExerciseView'
 
-// Ejercicios habilitados (se amplía a medida que se construyen).
-const ENABLED: ReadonlySet<Kind> | undefined = undefined
-
+/** Repaso espaciado (o práctica libre) con palabras de lecciones ya hechas. */
 export function Session({ mode, onExit }: { mode: SessionMode; onExit: () => void }) {
   const [round, setRound] = useState(0)
   return <Round key={round} mode={mode} onExit={onExit} onAgain={() => setRound((r) => r + 1)} />
@@ -20,13 +18,12 @@ function Round({ mode, onExit, onAgain }: { mode: SessionMode; onExit: () => voi
   const [done, setDone] = useState(0)
   const [turn, setTurn] = useState(0)
   const [failed, setFailed] = useState<number[]>([])
-  const [newCount, setNewCount] = useState(0)
 
   const current = queue[0]
   const exercise: Exercise | null = useMemo(() => {
     if (!current) return null
     const w = BY_ID.get(current.id)!
-    return makeExercise(w, getState().words[current.id], { isNew: current.isNew, retry: current.retry }, ENABLED)
+    return makeExercise(w, getState().words[current.id], { isNew: false, retry: current.retry })
   }, [current])
 
   const onResult = useCallback(
@@ -36,41 +33,41 @@ function Round({ mode, onExit, onAgain }: { mode: SessionMode; onExit: () => voi
       const rec = applyAnswer(
         prev,
         correct,
-        { isNew: current.isNew, freeNotDue: current.freeNotDue, retry: current.retry },
+        { isNew: !prev, freeNotDue: current.freeNotDue, retry: current.retry },
         exercise.kind,
       )
-      saveRec(current.id, rec, current.isNew && mode === 'daily')
+      saveRec(current.id, rec, false)
       setTurn((t) => t + 1)
       if (correct) {
-        if (!current.retry) {
-          setDone((d) => d + 1)
-          if (current.isNew) setNewCount((n) => n + 1)
-        }
+        if (!current.retry) setDone((d) => d + 1)
         setQueue((q) => q.slice(1))
       } else {
         setFailed((f) => (f.includes(current.id) ? f : [...f, current.id]))
         setQueue((q) => {
           const rest = q.slice(1)
           const at = Math.min(3, rest.length)
-          const again: SessionItem = { id: current.id, isNew: false, freeNotDue: false, retry: true }
+          const again: SessionItem = { id: current.id, freeNotDue: false, retry: true }
           return [...rest.slice(0, at), again, ...rest.slice(at)]
         })
       }
     },
-    [current, exercise, mode],
+    [current, exercise],
   )
 
   if (!current || !exercise) {
     return (
       <div className="screen">
         <div className="card center stack">
-          <h2>{total === 0 ? 'No hay nada para practicar' : 'Sesión terminada'}</h2>
+          <h2>{total === 0 ? 'No hay nada para repasar' : 'Repaso terminado'}</h2>
           {total === 0 ? (
-            <p className="muted">No tenés repasos vencidos ni palabras nuevas para hoy con estos filtros.</p>
+            <p className="muted">
+              {mode === 'review'
+                ? 'No tenés repasos vencidos. Seguí con la próxima lección del camino.'
+                : 'No hay palabras ya aprendidas con esos filtros. Completá lecciones para practicarlas acá.'}
+            </p>
           ) : (
             <p className="muted">
-              Repasaste {total} {total === 1 ? 'palabra' : 'palabras'}
-              {newCount > 0 && <>, {newCount} nuevas</>}.
+              Repasaste {total} {total === 1 ? 'palabra' : 'palabras'}.
             </p>
           )}
           {failed.length > 0 && (
@@ -90,11 +87,11 @@ function Round({ mode, onExit, onAgain }: { mode: SessionMode; onExit: () => voi
           )}
           <div className="btn-row">
             <button type="button" className="btn" onClick={onExit}>
-              Volver al inicio
+              Volver
             </button>
-            {total > 0 && mode === 'daily' && (
+            {total > 0 && mode === 'review' && (
               <button type="button" className="btn primary" onClick={onAgain}>
-                Otra tanda
+                Seguir repasando
               </button>
             )}
           </div>
@@ -107,7 +104,7 @@ function Round({ mode, onExit, onAgain }: { mode: SessionMode; onExit: () => voi
   return (
     <div className="screen session">
       <div className="session-top">
-        <button type="button" className="icon-btn" aria-label="Salir de la sesión" onClick={onExit}>
+        <button type="button" className="icon-btn" aria-label="Salir" onClick={onExit}>
           ✕
         </button>
         <div className="bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
@@ -117,7 +114,7 @@ function Round({ mode, onExit, onAgain }: { mode: SessionMode; onExit: () => voi
           {done}/{total}
         </span>
       </div>
-      <ExerciseView key={turn} ex={exercise} isNew={current.isNew} onDone={onResult} />
+      <ExerciseView key={turn} ex={exercise} isNew={false} onDone={onResult} />
     </div>
   )
 }

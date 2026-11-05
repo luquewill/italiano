@@ -53,6 +53,8 @@ export interface State {
   settings: Settings
   words: Record<number, Rec>
   daily: { date: string; newDone: number }
+  /** Lecciones del camino completadas (ids de curriculum.json). */
+  path: { done: string[] }
 }
 
 export type WordStatus = 'nueva' | 'aprendiendo' | 'reconozco' | 'uso'

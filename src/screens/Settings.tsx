@@ -37,17 +37,6 @@ export function Settings() {
 
       <section className="card stack">
         <label className="field">
-          <span>Palabras nuevas por día</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={100}
-            value={settings.nuevasPorDia}
-            onChange={(e) => updateSettings({ nuevasPorDia: clamp(+e.target.value, 1, 100) })}
-          />
-        </label>
-        <label className="field">
           <span>Repasos máximos por sesión</span>
           <input
             type="number"

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useAppState } from './core/progress'
 import { Explore } from './screens/Explore'
 import { Home } from './screens/Home'
+import { Lesson } from './screens/Lesson'
 import { Progress } from './screens/Progress'
 import { Session } from './screens/Session'
 import { Settings } from './screens/Settings'
@@ -31,7 +32,7 @@ const icon = (d: ReactNode) => (
 )
 
 const TABS: { to: string; label: string; icon: ReactNode }[] = [
-  { to: '', label: 'Inicio', icon: icon(<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />) },
+  { to: '', label: 'Camino', icon: icon(<path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" />) },
   { to: 'explorar', label: 'Explorar', icon: icon(<><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>) },
   { to: 'progreso', label: 'Progreso', icon: icon(<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />) },
   { to: 'ajustes', label: 'Ajustes', icon: icon(<><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2" /></>) },
@@ -50,7 +51,11 @@ export default function App() {
   const [name = '', param = ''] = hash.split('/')
 
   if (name === 'sesion') {
-    return <Session mode={param === 'free' ? 'free' : 'daily'} onExit={() => go('')} />
+    return <Session mode={param === 'free' ? 'free' : 'review'} onExit={() => go('')} />
+  }
+
+  if (name === 'leccion') {
+    return <Lesson lessonId={decodeURIComponent(param)} onExit={() => go('')} onNext={(id) => go('leccion/' + id)} />
   }
 
   let screen: ReactNode
@@ -70,12 +75,12 @@ export default function App() {
       screen = <Settings />
       break
     default:
-      screen = <Home onStart={(m) => go('sesion/' + m)} />
+      screen = <Home onOpenLesson={(id) => go('leccion/' + id)} onReview={() => go('sesion/review')} />
       active = ''
   }
 
   return (
-    <div className="app">
+    <div className={`app ${active === '' ? 'on-path' : ''}`}>
       <main>{screen}</main>
       <nav className="nav" aria-label="Principal">
         <div className="nav-inner">

@@ -268,3 +268,71 @@ export function makeExercise(w: Word, rec: Rec | undefined, ctx: PickCtx, enable
   }
   return buildChoice(w, 'it2es')
 }
+
+/* ---------- ejercicios por nivel de dificultad (lecciones) ---------- */
+
+export type Level = 1 | 2 | 3
+
+/**
+ * Ejercicio de lección según dificultad:
+ *  1 = reconocer (elegir entre opciones) · 2 = elegir en sentido inverso / completar con opciones ·
+ *  3 = producir (escribir, artículo+plural, auxiliar+participio, completar escribiendo).
+ */
+export function makeLessonExercise(w: Word, level: Level, avoid?: Kind): Exercise {
+  const speech = speechAvailable()
+  const c: { kind: Kind; weight: number; build: () => Exercise | null }[] = []
+  const add = (kind: Kind, weight: number, build: () => Exercise | null) => c.push({ kind, weight, build })
+
+  if (level === 1) {
+    add('choice', 3, () => buildChoice(w, 'it2es'))
+    add('choice', 1, () => buildChoice(w, 'es2it'))
+    if (speech) add('listen', 1.5, () => buildListen(w, 'word', 'choice'))
+  } else if (level === 2) {
+    add('choice', 2, () => buildChoice(w, 'es2it'))
+    add('cloze', 3, () => {
+      const e = buildCloze(w, true)
+      return e && e.kind === 'cloze' && e.options ? e : null
+    })
+    add('adj', 3, () => {
+      const e = buildAdj(w, true)
+      return e && e.kind === 'adj' && e.options ? e : null
+    })
+    if (speech) {
+      add('listen', 1.5, () => buildListen(w, 'sentence', 'choice'))
+      add('listen', 1, () => buildListen(w, 'word', 'choice'))
+    }
+  } else {
+    add('typing', 2, () => buildTyping(w))
+    add('article', 3, () => buildArticle(w))
+    add('aux', 3, () => buildAux(w))
+    add('adj', 3, () => buildAdj(w, false))
+    add('cloze', 2.5, () => buildCloze(w, false))
+    if (speech) {
+      add('listen', 1, () => buildListen(w, 'word', 'typing'))
+      add('listen', 1, () => buildListen(w, 'sentence', 'typing'))
+    }
+  }
+
+  let pool = c.filter((x) => x.kind !== avoid)
+  if (!pool.length) pool = c
+  while (pool.length) {
+    const total = pool.reduce((s, x) => s + x.weight, 0)
+    let r = Math.random() * total
+    let idx = 0
+    for (; idx < pool.length; idx++) {
+      r -= pool[idx].weight
+      if (r <= 0) break
+    }
+    const pick = pool[Math.min(idx, pool.length - 1)]
+    const ex = pick.build()
+    if (ex) return ex
+    pool = pool.filter((x) => x !== pick)
+  }
+  // sin candidatos aplicables: nivel más fácil / escribir
+  return level === 3 ? buildTyping(w) : buildChoice(w, level === 2 ? 'es2it' : 'it2es')
+}
+
+/** Reintento tras un fallo: reconocimiento fácil. */
+export function makeRetryExercise(w: Word): Exercise {
+  return buildChoice(w, Math.random() < 0.5 ? 'it2es' : 'es2it')
+}
