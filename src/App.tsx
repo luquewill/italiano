@@ -2,7 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { useAppState } from './core/progress'
 import { Explore } from './screens/Explore'
 import { Home } from './screens/Home'
+import { useAuth } from './cloud/sync'
 import { Lesson } from './screens/Lesson'
+import { Login } from './screens/Login'
 import { Progress } from './screens/Progress'
 import { Session } from './screens/Session'
 import { Settings } from './screens/Settings'
@@ -48,7 +50,13 @@ export default function App() {
     else r.dataset.theme = settings.tema === 'claro' ? 'light' : 'dark'
   }, [settings.tema])
 
+  const auth = useAuth()
   const [name = '', param = ''] = hash.split('/')
+
+  if (auth.status === 'loading' && !auth.guest) {
+    return <div className="screen center muted">Cargando…</div>
+  }
+  if (auth.status === 'out' && !auth.guest) return <Login />
 
   if (name === 'sesion') {
     return <Session mode={param === 'free' ? 'free' : 'review'} onExit={() => go('')} />

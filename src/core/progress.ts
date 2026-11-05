@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   filtros: { niveles: [], tipos: [], temas: [] },
 }
 
-const fresh = (): State => ({
+export const fresh = (): State => ({
   version: 1,
   settings: structuredClone(DEFAULT_SETTINGS),
   words: {},
@@ -21,7 +21,7 @@ const fresh = (): State => ({
 })
 
 /** Valida/normaliza un objeto leído de localStorage o de un backup. */
-function sanitize(x: unknown): State | null {
+export function sanitize(x: unknown): State | null {
   if (!x || typeof x !== 'object') return null
   const o = x as Partial<State>
   if (o.version !== 1 || typeof o.words !== 'object' || o.words === null) return null
@@ -68,6 +68,20 @@ export function getState(): State {
 
 export function setState(fn: (s: State) => State) {
   state = fn(state)
+  persist()
+  listeners.forEach((l) => l())
+}
+
+export function subscribeState(cb: () => void) {
+  listeners.add(cb)
+  return () => {
+    listeners.delete(cb)
+  }
+}
+
+/** Reemplaza todo el estado (login, sincronización). */
+export function replaceState(next: State) {
+  state = next
   persist()
   listeners.forEach((l) => l())
 }

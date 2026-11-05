@@ -47,4 +47,11 @@ La voz usa la Web Speech API con it-IT: depende de las voces instaladas en el di
 - **Práctica libre**: en Explorar, con filtros de nivel/tipo/tema, sobre palabras ya aprendidas.
 - **Progreso guardado** en `localStorage` (`italiano-progreso-v1`); los backups anteriores a la versión con camino se importan sin problema (empiezan en la primera lección).
 
+## Cuenta y sincronización (Supabase)
+
+- Inicio de sesión con correo y contraseña (o "seguir sin cuenta"). El progreso de cada usuario se guarda en la tabla `progreso` de Supabase y se sincroniza entre dispositivos; sin conexión la app sigue funcionando con `localStorage` y sincroniza al volver.
+- Al iniciar sesión se **fusiona** el progreso del dispositivo con el de la nube: por palabra gana el registro más reciente y las lecciones completadas se suman.
+- La URL y la clave `sb_publishable_…` de \`src/cloud/client.ts\` son públicas por diseño; la seguridad la da la regla por usuario (RLS) de la tabla.
+- Tabla (ya creada): `progreso(user_id uuid pk → auth.users, data jsonb, updated_at)`, con políticas select/insert/update solo para `auth.uid() = user_id`.
+
 Los íconos de la PWA se regeneran con `node scripts/make-icons.mjs`.

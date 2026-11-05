@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { exportJson, importJson, resetAll, updateSettings, useAppState } from '../core/progress'
+import { leaveGuest, pushNow, signOut, useAuth } from '../cloud/sync'
 import { speak, speechAvailable } from '../core/speech'
 import { today } from '../core/srs'
 import { Chip } from '../components/ui'
@@ -8,6 +9,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, M
 
 export function Settings() {
   const { settings } = useAppState()
+  const auth = useAuth()
   const file = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
 
@@ -26,6 +28,7 @@ export function Settings() {
     if (!f) return
     const ok = importJson(await f.text())
     setMsg(ok ? 'Progreso importado.' : 'Ese archivo no es un backup válido.')
+    if (ok) void pushNow(true)
     if (file.current) file.current.value = ''
   }
 
@@ -34,6 +37,38 @@ export function Settings() {
       <header>
         <h1>Ajustes</h1>
       </header>
+
+      <section className="card stack">
+        <h2>Cuenta</h2>
+        {auth.userId ? (
+          <>
+            <p>
+              Sesión iniciada como <strong>{auth.email}</strong>
+            </p>
+            <p className="muted small" role="status">
+              {auth.sync === 'saving' && 'Sincronizando…'}
+              {auth.sync === 'ok' && `Progreso sincronizado${auth.lastSync ? ' a las ' + new Date(auth.lastSync).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) : ''}.`}
+              {auth.sync === 'error' && 'No se pudo sincronizar (¿sin conexión?). Se reintenta solo.'}
+              {auth.sync === 'idle' && 'Tu progreso se guarda en tu cuenta.'}
+            </p>
+            <div className="btn-row">
+              <button type="button" className="btn" onClick={() => void pushNow()}>
+                Sincronizar ahora
+              </button>
+              <button type="button" className="btn" onClick={() => void signOut()}>
+                Cerrar sesión
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="muted small">Estás usando la app sin cuenta: el progreso queda solo en este dispositivo.</p>
+            <button type="button" className="btn primary" onClick={leaveGuest}>
+              Iniciar sesión o crear cuenta
+            </button>
+          </>
+        )}
+      </section>
 
       <section className="card stack">
         <label className="field">
@@ -99,6 +134,7 @@ export function Settings() {
           onClick={() => {
             if (window.confirm('¿Borrar todo tu progreso? No se puede deshacer (exportá un backup antes si dudás).')) {
               resetAll()
+              void pushNow(true)
               setMsg('Progreso reiniciado.')
             }
           }}
