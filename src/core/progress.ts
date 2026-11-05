@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { Rec, Settings, State } from '../types'
+import { DATA_VERSION, migrateDone, migrateWords } from './migrate'
 import { today } from './srs'
 
 const KEY = 'italiano-progreso-v1'
@@ -14,6 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const fresh = (): State => ({
   version: 1,
+  dataVersion: DATA_VERSION,
   settings: structuredClone(DEFAULT_SETTINGS),
   words: {},
   daily: { date: today(), newDone: 0 },
@@ -38,6 +40,11 @@ export function sanitize(x: unknown): State | null {
   if (o.daily && typeof o.daily.date === 'string') s.daily = { date: o.daily.date, newDone: o.daily.newDone | 0 }
   // migración: los backups/estados anteriores no tienen camino
   if (o.path && Array.isArray(o.path.done)) s.path = { done: o.path.done.filter((x) => typeof x === 'string') }
+  // migración: progreso guardado con la base anterior (ids de palabras y lecciones distintos)
+  if (o.dataVersion !== DATA_VERSION) {
+    s.words = migrateWords(s.words)
+    s.path = { done: migrateDone(s.path.done) }
+  }
   return s
 }
 

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import type { Rec, State } from '../types'
+import { DATA_VERSION } from '../core/migrate'
 import { fresh, getState, replaceState, sanitize, subscribeState } from '../core/progress'
 import { supabase } from './client'
 
@@ -77,7 +78,7 @@ export function mergeStates(local: State, remote: State): State {
       : local.daily.date > remote.daily.date
         ? local.daily
         : remote.daily
-  return { version: 1, settings: remote.settings, words, daily, path: { done } }
+  return { version: 1, dataVersion: DATA_VERSION, settings: remote.settings, words, daily, path: { done } }
 }
 
 /* ---------- subida / bajada ---------- */

@@ -50,6 +50,8 @@ export interface Settings {
 
 export interface State {
   version: 1
+  /** Versión de los datos de vocabulario/currículo con que se guardó (ausente = base original de 1.974 palabras). */
+  dataVersion?: number
   settings: Settings
   words: Record<number, Rec>
   daily: { date: string; newDone: number }

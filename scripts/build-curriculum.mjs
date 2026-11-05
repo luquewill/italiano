@@ -65,7 +65,7 @@ const PLAN = {
   ],
   B1: [
     ['Verbos y acciones', ['básicos:verbo', 'cambio', 'movimiento']],
-    ['Cosas y cualidades', ['básicos:!verbo', 'descripción', 'rutina']],
+    ['Cosas y cualidades', ['básicos:!verbo', 'descripción', 'colores', 'rutina']],
     ['Casa, ciudad y compras', ['casa', 'ciudad', 'compras', 'ropa']],
     ['Comida, dinero y vida cotidiana', ['comida', 'dinero', 'vida']],
     ['Viajes, trámites y tiempo', ['viajes', 'transporte', 'trámites', 'tiempo']],
@@ -77,8 +77,8 @@ const PLAN = {
     ['Comunicación y tecnología', ['comunicación', 'tecnología']],
     ['Estudio y trabajo', ['estudio', 'trabajo']],
     ['Sociedad', ['sociedad']],
-    ['Conectores y palabras de enlace', ['conectores', 'preposiciones', 'pronombres', 'indefinidos', 'relativos', 'números']],
-    ['Opinar y conversar', ['cantidad', 'frecuencia', 'lugar', 'modo', 'opinión', 'conversación', 'cortesía', 'reacciones', 'celebraciones']],
+    ['Conectores y palabras de enlace', ['conectores', 'preposiciones', 'pronombres', 'posesivos', 'demostrativos', 'indefinidos', 'preguntas', 'relativos', 'números']],
+    ['Opinar y conversar', ['cantidad', 'frecuencia', 'lugar', 'modo', 'opinión', 'conversación', 'cortesía', 'reacciones', 'deseos', 'celebraciones']],
   ],
 }
 
@@ -129,25 +129,65 @@ function tamanos(n) {
 const usados = new Set()
 const unidades = []
 const avisos = []
+const MAXU = 60 // una unidad con más palabras se parte en partes
+
+/** Reparte las palabras de una unidad en partes de hasta MAXU, sin cortar un tema si no hace falta. */
+function partir(listas) {
+  const total = listas.reduce((n, l) => n + l.length, 0)
+  if (total <= MAXU) return [listas.flat()]
+  const bloques = []
+  for (const l of listas) {
+    if (l.length <= MAXU - 10) bloques.push(l)
+    else {
+      const k = Math.ceil(l.length / 50)
+      const t = Math.ceil(l.length / k)
+      for (let i = 0; i < l.length; i += t) bloques.push(l.slice(i, i + t))
+    }
+  }
+  const partes = [[]]
+  for (const bl of bloques) {
+    const cur = partes[partes.length - 1]
+    if (cur.length && cur.length + bl.length > MAXU) partes.push([...bl])
+    else cur.push(...bl)
+  }
+  // una parte final muy chica se junta con la anterior si no queda enorme
+  if (partes.length > 1 && partes[partes.length - 1].length < 16) {
+    const ult = partes.pop()
+    if (partes[partes.length - 1].length + ult.length <= MAXU + 12) partes[partes.length - 1].push(...ult)
+    else partes.push(ult)
+  }
+  return partes
+}
+
 let nUnidad = 0
 for (const nivel of ['A1', 'A2', 'B1']) {
   for (const [titulo, fuentes, primero] of PLAN[nivel]) {
-    nUnidad++
-    const words = vocab.filter((w) => w.nivel === nivel && fuentes.some((s) => matches(w, s)))
-    for (const w of words) {
-      if (usados.has(w.id)) avisos.push(`Duplicada: ${w.italiano} (${nivel})`)
-      usados.add(w.id)
-    }
-    const ordered = ordenar(words, primero)
-    const id = `${nivel}-${String(nUnidad).padStart(2, '0')}`
-    const lecciones = []
-    let i = 0
-    tamanos(ordered.length).forEach((t, li) => {
-      lecciones.push({ id: `${id}-L${li + 1}`, titulo: `Lección ${li + 1}`, palabras: ordered.slice(i, i + t).map((w) => w.id) })
-      i += t
+    const delNivel = vocab.filter((w) => w.nivel === nivel)
+    const asignadas = new Set()
+    const listas = fuentes.map((src) => {
+      const l = delNivel.filter((w) => !asignadas.has(w.id) && matches(w, src))
+      l.forEach((w) => asignadas.add(w.id))
+      return l
     })
-    lecciones.push({ id: `${id}-cierre`, titulo: 'Lección de cierre', cierre: true, palabras: ordered.map((w) => w.id) })
-    unidades.push({ id, nivel, titulo, total: ordered.length, lecciones })
+    const partes = partir(listas)
+    partes.forEach((words, pi) => {
+      nUnidad++
+      for (const w of words) {
+        if (usados.has(w.id)) avisos.push(`Duplicada: ${w.italiano} (${nivel})`)
+        usados.add(w.id)
+      }
+      const ordered = ordenar(words, pi === 0 ? primero : [])
+      const id = `${nivel}-${String(nUnidad).padStart(2, '0')}`
+      const lecciones = []
+      let i = 0
+      tamanos(ordered.length).forEach((t, li) => {
+        lecciones.push({ id: `${id}-L${li + 1}`, titulo: `Lección ${li + 1}`, palabras: ordered.slice(i, i + t).map((w) => w.id) })
+        i += t
+      })
+      lecciones.push({ id: `${id}-cierre`, titulo: 'Lección de cierre', cierre: true, palabras: ordered.map((w) => w.id) })
+      const tit = partes.length > 1 ? `${titulo} (${pi + 1}/${partes.length})` : titulo
+      unidades.push({ id, nivel, titulo: tit, total: ordered.length, lecciones })
+    })
   }
 }
 for (const w of vocab) if (!usados.has(w.id)) avisos.push(`Sin unidad: ${w.italiano} (${w.nivel}/${w.tema}/${w.tipo})`)
